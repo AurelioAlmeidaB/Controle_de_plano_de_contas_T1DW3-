@@ -1,0 +1,55 @@
+### Necessário para pegar o token
+# @name loginAutenticado
+POST http://localhost:41000/Login HTTP/1.1
+content-type: application/json
+
+{
+    "UserName": "qwe",
+    "Password": "qwe"
+}
+
+### Seta o token
+@accessToken = {{loginAutenticado.response.body.$.token}}
+
+### teste de buscar todas as contas do plano de contas
+GET http://localhost:41000/getAllPlanoContas HTTP/1.1
+content-type: application/json
+Authorization: Bearer {{accessToken}}
+
+### teste de buscar conta por ID
+GET http://localhost:41000/getPlanoContaByID/1 HTTP/1.1
+content-type: application/json
+Authorization: Bearer {{accessToken}}
+
+### teste de inserção de conta
+POST http://localhost:41000/insertPlanoConta HTTP/1.1
+content-type: application/json
+Authorization: Bearer {{accessToken}}
+
+{
+    "codigo": "2.2.02",
+    "descricao": "Manutenção de máquinas",
+    "tipo": "Despesa",
+    "ativo": true
+}
+
+### teste de atualização de conta
+PUT http://localhost:41000/updatePlanoConta/7 HTTP/1.1
+content-type: application/json
+Authorization: Bearer {{accessToken}}
+
+{
+    "codigo": "2.2.01",
+    "descricao": "Material de escritório e limpeza",
+    "tipo": "Despesa",
+    "ativo": true
+}
+
+### teste de remoção (soft delete) de conta
+DELETE http://localhost:41000/deletePlanoConta/7 HTTP/1.1
+content-type: application/json
+Authorization: Bearer {{accessToken}}
+
+### teste sem token (deve ser bloqueado)
+GET http://localhost:41000/getAllPlanoContas HTTP/1.1
+content-type: application/json

@@ -1,0 +1,56 @@
+### Necessário para pegar o token
+# @name loginAutenticado
+POST http://localhost:41000/Login HTTP/1.1
+content-type: application/json
+
+{
+    "UserName": "qwe",
+    "Password": "qwe"
+}
+
+### Seta o token
+@accessToken = {{loginAutenticado.response.body.$.token}}
+
+### teste de buscar todos os lançamentos
+GET http://localhost:41000/getAllLancamentos HTTP/1.1
+content-type: application/json
+Authorization: Bearer {{accessToken}}
+
+### teste de buscar lançamento por ID
+GET http://localhost:41000/getLancamentoByID/1 HTTP/1.1
+content-type: application/json
+Authorization: Bearer {{accessToken}}
+
+### teste de buscar contas para o select de lançamentos
+GET http://localhost:41000/getPlanoContasToLancamentos HTTP/1.1
+content-type: application/json
+Authorization: Bearer {{accessToken}}
+
+### teste de inserção de lançamento
+POST http://localhost:41000/insertLancamento HTTP/1.1
+content-type: application/json
+Authorization: Bearer {{accessToken}}
+
+{
+    "descricao": "Folha de pagamento - setembro",
+    "valor": 12500.90,
+    "datalancamento": "2026-09-30",
+    "planocontaid": 6
+}
+
+### teste de atualização de lançamento
+PUT http://localhost:41000/updateLancamento/1 HTTP/1.1
+content-type: application/json
+Authorization: Bearer {{accessToken}}
+
+{
+    "descricao": "Venda de sementes - cooperado 102 (ajustado)",
+    "valor": 15500.00,
+    "datalancamento": "2026-09-02",
+    "planocontaid": 1
+}
+
+### teste de remoção (soft delete) de lançamento
+DELETE http://localhost:41000/deleteLancamento/1 HTTP/1.1
+content-type: application/json
+Authorization: Bearer {{accessToken}}

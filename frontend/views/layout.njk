@@ -1,0 +1,64 @@
+<!-- views/layout.njk -->
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ title or 'Plano de Contas' }} | Financeiro ERP</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+  <link rel="stylesheet" href="/stylesheets/style.css">
+  <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script> <!-- Usado pelo DataTables e Select2 -->
+  <script src="/js/dw3frontend.js"></script>
+</head>
+<body class="app-shell">
+  {% if showNavbar %}
+    <nav class="navbar navbar-expand-md navbar-dark app-navbar shadow-sm">
+      <div class="container">
+        <a class="navbar-brand fw-semibold" href="/home">
+          <i class="bi bi-diagram-3 me-1"></i>Plano de Contas
+        </a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse"
+          data-bs-target="#mainNavbar" aria-controls="mainNavbar" aria-expanded="false" aria-label="Alternar navegação">
+          <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="mainNavbar">
+          <ul class="navbar-nav me-auto mb-2 mb-md-0 gap-md-2">
+            <li class="nav-item">
+              <a class="nav-link {% if activeMenu == 'home' %}active{% endif %}" href="/home">
+                <i class="bi bi-house me-1"></i>Início
+              </a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link {% if activeMenu == 'planocontas' %}active{% endif %}" href="/planocontas">
+                <i class="bi bi-list-columns-reverse me-1"></i>Plano de Contas
+              </a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link {% if activeMenu == 'lancamentos' %}active{% endif %}" href="/lancamentos">
+                <i class="bi bi-cash-stack me-1"></i>Lançamentos
+              </a>
+            </li>
+          </ul>
+          <div class="d-flex align-items-center gap-3">
+            <span class="navbar-text small">
+              <i class="bi bi-person-circle me-1"></i><span id="navUsuario">usuário</span>
+            </span>
+            <a class="btn btn-sm btn-outline-light" href="/login" id="btnSair">
+              <i class="bi bi-box-arrow-right me-1"></i>Sair
+            </a>
+          </div>
+        </div>
+      </div>
+    </nav>
+  {% endif %}
+
+  <main class="app-main">
+    <div class="container py-4 py-lg-5">
+      {% block content %}{% endblock %}
+    </div>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

@@ -1,0 +1,79 @@
+<!-- arquivo: apps/lancamentos/vwLstLancamentos.njk -->
+
+{% extends "layout.njk" %}
+
+{% block content %}
+  <link rel="stylesheet" href="https://cdn.datatables.net/2.1.8/css/dataTables.bootstrap5.css">
+
+  <header class="page-header">
+    <p class="page-kicker text-primary fw-semibold mb-2">Movimentação</p>
+    <h1 class="h3 fw-bold mb-2">Lançamentos</h1>
+    <p class="text-secondary mb-0">Consulte os lançamentos financeiros registrados em cada conta.</p>
+  </header>
+
+  <div class="row g-3 mb-4">
+    <div class="col-12 col-md-4">
+      <div class="card resumo-card border-0 shadow-sm h-100">
+        <div class="card-body">
+          <p class="text-secondary small mb-1"><i class="bi bi-arrow-down-circle text-success me-1"></i>Receitas</p>
+          <p class="resumo-valor text-success mb-0" id="totalReceitas">—</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-12 col-md-4">
+      <div class="card resumo-card border-0 shadow-sm h-100">
+        <div class="card-body">
+          <p class="text-secondary small mb-1"><i class="bi bi-arrow-up-circle text-danger me-1"></i>Despesas</p>
+          <p class="resumo-valor text-danger mb-0" id="totalDespesas">—</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-12 col-md-4">
+      <div class="card resumo-card border-0 shadow-sm h-100">
+        <div class="card-body">
+          <p class="text-secondary small mb-1"><i class="bi bi-wallet2 me-1"></i>Saldo</p>
+          <p class="resumo-valor mb-0" id="totalSaldo">—</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card page-card border-0 shadow-sm">
+    <div class="card-body p-4">
+      <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-md-between gap-3 mb-4">
+        <div>
+          <h2 class="h5 fw-semibold mb-1">Lista de lançamentos</h2>
+          <p class="text-secondary mb-0">Lançamentos retornados pelo servidor backend.</p>
+        </div>
+        <a class="btn btn-primary" href="/lancamentos/form?oper=Cr" id="btnNovoLancamento">
+          <i class="bi bi-plus-lg me-1"></i>Incluir novo lançamento
+        </a>
+      </div>
+
+      <div id="lancamentosAlert" class="alert d-none" role="alert"></div>
+
+      <div id="lancamentosListagem" data-servidor-dw3="{{ servidorDw3 }}">
+        <div class="table-responsive">
+          <table id="tblLancamentos" class="table table-striped table-hover align-middle w-100">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Data</th>
+                <th>Descrição</th>
+                <th>Conta</th>
+                <th>Tipo</th>
+                <th class="text-end">Valor</th>
+                <th>Operações</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.datatables.net/2.1.8/js/dataTables.js"></script>
+  <script src="https://cdn.datatables.net/2.1.8/js/dataTables.bootstrap5.js"></script>
+  <script src="/apps/lancamentos/vwLstLancamentos.js"></script>
+{% endblock %}

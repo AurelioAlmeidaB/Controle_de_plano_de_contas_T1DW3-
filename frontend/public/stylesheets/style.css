@@ -1,0 +1,77 @@
+/* public/stylesheets/style.css */
+
+.app-shell {
+  min-height: 100vh;
+  background: #f4f6fb;
+}
+
+.app-navbar {
+  background: #1e3a5f;
+}
+
+.page-header {
+  margin-bottom: 1.5rem;
+}
+
+.page-kicker {
+  font-size: 0.8rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.hero-card,
+.page-card,
+.login-card,
+.resumo-card,
+.modulo-card {
+  border-radius: 1rem;
+}
+
+.login-screen {
+  min-height: calc(100vh - 6rem);
+}
+
+.login-card {
+  width: 100%;
+  max-width: 420px;
+}
+
+.login-icon {
+  width: 3rem;
+  height: 3rem;
+  border-radius: 0.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  color: #fff;
+  background: #1e3a5f;
+}
+
+.resumo-card .resumo-valor {
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+.modulo-card {
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.modulo-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 0.5rem 1.5rem rgba(0, 0, 0, 0.08) !important;
+}
+
+.modulo-icon {
+  font-size: 2rem;
+  color: #1e3a5f;
+}
+
+.form-label .obrigatorio {
+  color: #dc3545;
+}
+
+.form-control:disabled,
+.form-select:disabled {
+  background-color: #f1f3f7;
+}

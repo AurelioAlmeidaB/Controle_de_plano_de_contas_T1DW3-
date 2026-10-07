@@ -1,0 +1,27 @@
+//-- apps/login/tests/testLogin.rest
+
+### teste de login
+POST http://localhost:41000/Login HTTP/1.1
+content-type: application/json
+
+{
+    "UserName": "qwe",
+    "Password": "qwe"
+}
+
+### teste de login com senha errada
+POST http://localhost:41000/Login HTTP/1.1
+content-type: application/json
+
+{
+    "UserName": "qwe",
+    "Password": "errada"
+}
+
+### teste de logout
+POST http://localhost:41000/Logout HTTP/1.1
+content-type: application/json
+
+{
+
+}
