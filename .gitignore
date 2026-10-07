@@ -1,2 +1,10 @@
+# Dependências instaladas pelo npm
 node_modules/
+
+# Arquivos com senhas e chaves (nunca enviar ao GitHub)
 .env
+.env.*
+!.env.example
+
+# Logs
+npm-debug.log*

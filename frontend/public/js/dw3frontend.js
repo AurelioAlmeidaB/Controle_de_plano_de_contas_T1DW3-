@@ -176,12 +176,40 @@ var dw3DataTablesPtBr = {
   }
 };
 
-// Mostra o nome do usuário logado na barra de navegação.
+// Consome a API Logout do backend e encerra a sessão no navegador.
+async function vwLogout(servidorDw3) {
+  try {
+    if (servidorDw3) {
+      await fetch(servidorDw3 + '/Logout', {
+        method: 'POST',
+        headers: dw3MontarHeadersAutenticacao({ 'content-type': 'application/json' })
+      });
+    }
+  } catch (error) {
+    // Mesmo sem resposta do backend, a sessão local é encerrada.
+  } finally {
+    dw3ClearIsLoggedCookie();
+    dw3SalvarAviso('Você saiu do sistema.', 'info');
+    window.location.href = '/login';
+  }
+}
+
 document.addEventListener('DOMContentLoaded', function() {
+  // Mostra o nome do usuário logado na barra de navegação.
   var navUsuario = document.getElementById('navUsuario');
   var username = localStorage.getItem('username');
 
   if (navUsuario && username) {
     navUsuario.textContent = username;
+  }
+
+  // Botão Sair do menu chama a função de logout.
+  var btnSair = document.getElementById('btnSair');
+
+  if (btnSair) {
+    btnSair.addEventListener('click', function(event) {
+      event.preventDefault();
+      vwLogout(btnSair.dataset.servidorDw3);
+    });
   }
 });

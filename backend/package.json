@@ -1,10 +1,10 @@
 {
-  "name": "backend",
+  "name": "planocontas-backend",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "description": "APIs do Controle de Plano de Contas (T1 DW3)",
+  "main": "app.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "node app.js"
   },
   "keywords": [],
   "author": "",

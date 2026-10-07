@@ -89,9 +89,9 @@ docker exec -i dw3postgres psql -U postgres -d planocontas < backend/databaseCon
 
 ```bash
 cd backend
-cp .env.example .env   # preencha SECRET_API, DB_USER e DB_PASS
+cp .env.example .env   # preencha SECRET_API, DB_USER e DB_PASS (veja "Senhas e chaves" abaixo)
 npm install
-node app.js            # http://localhost:41000
+npm start              # http://localhost:41000
 ```
 
 ### 3. Front-end
@@ -99,8 +99,26 @@ node app.js            # http://localhost:41000
 ```bash
 cd frontend
 npm install
-node app.js            # http://localhost:41100
+npm start              # http://localhost:41100
 ```
+
+## Senhas e chaves (segredos)
+
+As senhas do banco e a chave que assina o JWT **não ficam no GitHub**. Elas ficam apenas no arquivo
+`backend/.env` de cada computador, que é ignorado pelo Git (`.gitignore`). No repositório vai somente o
+modelo `backend/.env.example`, sem valores.
+
+Ao clonar o projeto em outro computador:
+
+1. Copie o modelo: `cp backend/.env.example backend/.env`
+2. Preencha `DB_USER` e `DB_PASS` com o usuário e a senha do seu PostgreSQL.
+3. Gere uma chave aleatória para o JWT e cole em `SECRET_API`:
+
+   ```bash
+   node -e "console.log(require('crypto').randomBytes(48).toString('hex'))"
+   ```
+
+O `frontend/frontend.env` pode ficar no repositório porque contém apenas a porta e o endereço do back-end.
 
 Acesse **http://localhost:41100** e entre com o usuário **qwe** / senha **qwe** (ou **admin** / **admin**).
 
