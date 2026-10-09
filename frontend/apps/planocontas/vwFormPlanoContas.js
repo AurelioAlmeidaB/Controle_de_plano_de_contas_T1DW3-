@@ -1,6 +1,4 @@
 // Arquivo: apps/planocontas/vwFormPlanoContas.js
-// Operações recebidas pela URL (?oper=):
-//   Cr = cadastrar | Re = visualizar | Up = atualizar | De = remover
 
 document.addEventListener('DOMContentLoaded', async function() {
   if (!dw3IsLogged()) {
@@ -8,97 +6,114 @@ document.addEventListener('DOMContentLoaded', async function() {
   }
 
   var form = document.getElementById('frmPlanoContas');
-  var parametros = new URLSearchParams(window.location.search);
-  var oper = parametros.get('oper') || parametros.get('Oper');
-  var titulos = { Cr: 'Nova conta', Re: 'Visualizar conta', Up: 'Atualizar conta', De: 'Remover conta' };
 
-  document.getElementById('tituloOperacao').textContent = titulos[oper] || 'Formulário';
+  if (!form) {
+    return;
+  }
 
-  form.addEventListener('submit', function(event) {
-    event.preventDefault();
-
-    if (oper === 'Cr') {
-      vwInsertPlanoConta();
-    } else if (oper === 'Up') {
-      vwUpdatePlanoConta();
-    }
-  });
+  // oper vem da url: Cr (criar), Re (visualizar), Up (atualizar) e De (remover)
+  var oper = new URLSearchParams(window.location.search).get('oper') || 'Cr';
+  var btnInserir = document.getElementById('btnInserirPlanoConta');
+  var btnAtualizar = document.getElementById('btnAtualizarPlanoConta');
+  var btnRemover = document.getElementById('btnRemoverPlanoConta');
 
   if (oper === 'Cr') {
-    dw3MostrarBotao('btnInserirPlanoConta');
-    document.getElementById('codigo').focus();
-    return;
+    btnInserir.classList.remove('d-none');
+    btnInserir.addEventListener('click', function() {
+      vwInsertPlanoConta();
+    });
   }
 
   if (oper === 'Re') {
-    dw3HabilitarCampos(form, false);
-    await vwGetPlanoContaByID();
-    return;
+    bloquearCamposPlanoConta();
+    vwGetPlanoContaByID();
   }
 
   if (oper === 'Up') {
-    var btnAtualizar = dw3MostrarBotao('btnAtualizarPlanoConta');
+    btnAtualizar.classList.remove('d-none');
+    btnAtualizar.disabled = true;
+    btnAtualizar.addEventListener('click', function() {
+      vwUpdatePlanoConta();
+    });
     btnAtualizar.disabled = !(await vwGetPlanoContaByID());
-    return;
   }
 
   if (oper === 'De') {
-    dw3HabilitarCampos(form, false);
-    var btnRemover = dw3MostrarBotao('btnRemoverPlanoConta');
-    btnRemover.disabled = !(await vwGetPlanoContaByID());
+    bloquearCamposPlanoConta();
+    btnRemover.classList.remove('d-none');
+    btnRemover.disabled = true;
     btnRemover.addEventListener('click', function() {
       vwDeletePlanoConta();
     });
-    return;
+    btnRemover.disabled = !(await vwGetPlanoContaByID());
   }
-
-  dw3ExibirMensagem('planoContaAlert', 'Operação inválida.', 'danger');
 });
+
+function bloquearCamposPlanoConta() {
+  document.getElementById('codigo').readOnly = true;
+  document.getElementById('descricao').readOnly = true;
+  document.getElementById('tipo').disabled = true;
+  document.getElementById('ativo').disabled = true;
+}
 
 function montarPlanoContaDoFormulario() {
   return {
-    codigo: document.getElementById('codigo').value.trim(),
-    descricao: document.getElementById('descricao').value.trim(),
+    codigo: document.getElementById('codigo').value,
+    descricao: document.getElementById('descricao').value,
     tipo: document.getElementById('tipo').value,
     ativo: document.getElementById('ativo').checked
   };
 }
 
-function obterServidorPlanoContas() {
+function obterPlanoContaIdDaUrl() {
+  var planoContaId = new URLSearchParams(window.location.search).get('planoContaId');
+
+  if (!planoContaId || !/^\d+$/.test(planoContaId) || Number(planoContaId) <= 0) {
+    throw new Error('ID da conta inválido.');
+  }
+
+  return planoContaId;
+}
+
+// Faz a requisição ao backend e trata as respostas de erro padrão do sistema.
+async function enviarRequisicaoPlanoConta(caminho, opcoes, mensagemErro) {
   var servidorDw3 = document.getElementById('frmPlanoContas').dataset.servidorDw3;
 
   if (!servidorDw3) {
     throw new Error('Endereço do servidor backend não configurado.');
   }
 
-  return servidorDw3;
+  var response = await fetch(servidorDw3 + caminho, opcoes);
+
+  if (!response.ok) {
+    throw new Error(mensagemErro);
+  }
+
+  var data = await response.json();
+
+  if (data.auth === false) {
+    throw new Error(data.message || 'Sessão expirada. Faça login novamente.');
+  }
+
+  if (data.status !== 'ok') {
+    throw new Error(data.status || mensagemErro);
+  }
+
+  return data;
 }
 
-function mensagemDeErro(error, padrao) {
-  return error instanceof TypeError
-    ? 'Não foi possível conectar ao servidor backend.'
-    : error.message || padrao;
-}
-
-// Consome a API getPlanoContaByID e preenche os campos. Retorna true se encontrou a conta.
+// Retorna true quando a conta foi carregada no formulário.
 async function vwGetPlanoContaByID() {
   try {
-    var id = dw3ObterIdDaUrl();
+    var planoContaId = obterPlanoContaIdDaUrl();
+    var data = await enviarRequisicaoPlanoConta('/getPlanoContaByID/' + encodeURIComponent(planoContaId), {
+      headers: dw3MontarHeadersAutenticacao()
+    }, 'Não foi possível carregar a conta.');
 
-    if (!id) {
-      throw new Error('ID da conta inválido.');
-    }
-
-    var data = await dw3Requisicao(obterServidorPlanoContas() + '/getPlanoContaByID/' + encodeURIComponent(id));
-
-    if (data.status !== 'ok' || !Array.isArray(data.registro)) {
-      throw new Error('Resposta inválida do servidor backend.');
-    }
-
-    var conta = data.registro[0];
+    var conta = Array.isArray(data.registro) ? data.registro[0] : null;
 
     if (!conta) {
-      throw new Error('Conta não encontrada ou já removida.');
+      throw new Error('Conta não encontrada.');
     }
 
     document.getElementById('planocontaid').value = conta.planocontaid;
@@ -106,15 +121,13 @@ async function vwGetPlanoContaByID() {
     document.getElementById('descricao').value = conta.descricao ?? '';
     document.getElementById('tipo').value = conta.tipo ?? '';
     document.getElementById('ativo').checked = conta.ativo === true;
-
     return true;
   } catch (error) {
-    dw3ExibirMensagem('planoContaAlert', mensagemDeErro(error, 'Erro ao carregar a conta.'), 'danger');
+    alert(error.message || 'Erro ao carregar conta.');
     return false;
   }
 }
 
-// Consome a API insertPlanoConta.
 async function vwInsertPlanoConta() {
   var form = document.getElementById('frmPlanoContas');
   var btnInserir = document.getElementById('btnInserirPlanoConta');
@@ -123,28 +136,23 @@ async function vwInsertPlanoConta() {
     return;
   }
 
-  btnInserir.disabled = true;
-
   try {
-    var data = await dw3Requisicao(obterServidorPlanoContas() + '/insertPlanoConta', {
+    btnInserir.disabled = true;
+
+    await enviarRequisicaoPlanoConta('/insertPlanoConta', {
       method: 'POST',
+      headers: dw3MontarHeadersAutenticacao({ 'content-type': 'application/json' }),
       body: JSON.stringify(montarPlanoContaDoFormulario())
-    });
+    }, 'Não foi possível inserir a conta.');
 
-    if (data.status !== 'ok') {
-      throw new Error(data.status || 'Não foi possível inserir a conta.');
-    }
-
-    dw3SalvarAviso('Conta inserida com sucesso.', 'success');
     window.location.href = '/planocontas';
   } catch (error) {
-    dw3ExibirMensagem('planoContaAlert', mensagemDeErro(error, 'Erro ao inserir a conta.'), 'danger');
+    alert(error.message || 'Erro ao inserir conta.');
   } finally {
     btnInserir.disabled = false;
   }
 }
 
-// Consome a API updatePlanoConta.
 async function vwUpdatePlanoConta() {
   var form = document.getElementById('frmPlanoContas');
   var btnAtualizar = document.getElementById('btnAtualizarPlanoConta');
@@ -153,68 +161,53 @@ async function vwUpdatePlanoConta() {
     return;
   }
 
-  btnAtualizar.disabled = true;
-
   try {
-    var id = document.getElementById('planocontaid').value;
+    var planoContaId = obterPlanoContaIdDaUrl();
+    btnAtualizar.disabled = true;
 
-    var data = await dw3Requisicao(obterServidorPlanoContas() + '/updatePlanoConta/' + encodeURIComponent(id), {
+    var data = await enviarRequisicaoPlanoConta('/updatePlanoConta/' + encodeURIComponent(planoContaId), {
       method: 'PUT',
+      headers: dw3MontarHeadersAutenticacao({ 'content-type': 'application/json' }),
       body: JSON.stringify(montarPlanoContaDoFormulario())
-    });
-
-    if (data.status !== 'ok') {
-      throw new Error(data.status || 'Não foi possível atualizar a conta.');
-    }
+    }, 'Não foi possível atualizar a conta.');
 
     if (data.linhasAfetadas !== 1) {
       throw new Error('Nenhuma conta foi atualizada.');
     }
 
-    dw3SalvarAviso('Conta atualizada com sucesso.', 'success');
+    alert('Conta atualizada com sucesso.');
     window.location.href = '/planocontas';
   } catch (error) {
-    dw3ExibirMensagem('planoContaAlert', mensagemDeErro(error, 'Erro ao atualizar a conta.'), 'danger');
+    alert(error.message || 'Erro ao atualizar conta.');
   } finally {
     btnAtualizar.disabled = false;
   }
 }
 
-// Consome a API deletePlanoConta (soft delete).
 async function vwDeletePlanoConta() {
   var btnRemover = document.getElementById('btnRemoverPlanoConta');
 
-  if (btnRemover.disabled) {
+  if (btnRemover.disabled || !window.confirm('Confirma a remoção desta conta?')) {
     return;
   }
-
-  var descricao = document.getElementById('codigo').value + ' - ' + document.getElementById('descricao').value;
-
-  if (!window.confirm('Confirma a remoção da conta "' + descricao + '"?')) {
-    return;
-  }
-
-  btnRemover.disabled = true;
 
   try {
-    var id = document.getElementById('planocontaid').value;
+    var planoContaId = obterPlanoContaIdDaUrl();
+    btnRemover.disabled = true;
 
-    var data = await dw3Requisicao(obterServidorPlanoContas() + '/deletePlanoConta/' + encodeURIComponent(id), {
-      method: 'DELETE'
-    });
-
-    if (data.status !== 'ok') {
-      throw new Error(data.status || 'Não foi possível remover a conta.');
-    }
+    var data = await enviarRequisicaoPlanoConta('/deletePlanoConta/' + encodeURIComponent(planoContaId), {
+      method: 'DELETE',
+      headers: dw3MontarHeadersAutenticacao()
+    }, 'Não foi possível remover a conta.');
 
     if (data.linhasAfetadas !== 1) {
       throw new Error('Nenhuma conta foi removida.');
     }
 
-    dw3SalvarAviso('Conta removida com sucesso.', 'success');
     window.location.href = '/planocontas';
   } catch (error) {
-    dw3ExibirMensagem('planoContaAlert', mensagemDeErro(error, 'Erro ao remover a conta.'), 'danger');
+    alert(error.message || 'Erro ao remover conta.');
+  } finally {
     btnRemover.disabled = false;
   }
 }

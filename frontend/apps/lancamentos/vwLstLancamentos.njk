@@ -1,42 +1,16 @@
-<!-- arquivo: apps/lancamentos/vwLstLancamentos.njk -->
+<!-- Arquivo: ./apps/lancamentos/vwLstLancamentos.njk -->
 
 {% extends "layout.njk" %}
 
 {% block content %}
   <link rel="stylesheet" href="https://cdn.datatables.net/2.1.8/css/dataTables.bootstrap5.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
 
   <header class="page-header">
     <p class="page-kicker text-primary fw-semibold mb-2">Movimentação</p>
     <h1 class="h3 fw-bold mb-2">Lançamentos</h1>
-    <p class="text-secondary mb-0">Consulte os lançamentos financeiros registrados em cada conta.</p>
+    <p class="text-secondary mb-0">Consulte os lançamentos financeiros cadastrados no sistema.</p>
   </header>
-
-  <div class="row g-3 mb-4">
-    <div class="col-12 col-md-4">
-      <div class="card resumo-card border-0 shadow-sm h-100">
-        <div class="card-body">
-          <p class="text-secondary small mb-1"><i class="bi bi-arrow-down-circle text-success me-1"></i>Receitas</p>
-          <p class="resumo-valor text-success mb-0" id="totalReceitas">—</p>
-        </div>
-      </div>
-    </div>
-    <div class="col-12 col-md-4">
-      <div class="card resumo-card border-0 shadow-sm h-100">
-        <div class="card-body">
-          <p class="text-secondary small mb-1"><i class="bi bi-arrow-up-circle text-danger me-1"></i>Despesas</p>
-          <p class="resumo-valor text-danger mb-0" id="totalDespesas">—</p>
-        </div>
-      </div>
-    </div>
-    <div class="col-12 col-md-4">
-      <div class="card resumo-card border-0 shadow-sm h-100">
-        <div class="card-body">
-          <p class="text-secondary small mb-1"><i class="bi bi-wallet2 me-1"></i>Saldo</p>
-          <p class="resumo-valor mb-0" id="totalSaldo">—</p>
-        </div>
-      </div>
-    </div>
-  </div>
 
   <div class="card page-card border-0 shadow-sm">
     <div class="card-body p-4">
@@ -45,12 +19,10 @@
           <h2 class="h5 fw-semibold mb-1">Lista de lançamentos</h2>
           <p class="text-secondary mb-0">Lançamentos retornados pelo servidor backend.</p>
         </div>
-        <a class="btn btn-primary" href="/lancamentos/form?oper=Cr" id="btnNovoLancamento">
-          <i class="bi bi-plus-lg me-1"></i>Incluir novo lançamento
-        </a>
+        <a class="btn btn-primary" href="/lancamentos/form?oper=Cr" id="btnNovoLancamento">Incluir novo lançamento</a>
       </div>
 
-      <div id="lancamentosAlert" class="alert d-none" role="alert"></div>
+      <div id="lancamentosAlert" class="alert alert-danger d-none" role="alert"></div>
 
       <div id="lancamentosListagem" data-servidor-dw3="{{ servidorDw3 }}">
         <div class="table-responsive">
@@ -62,7 +34,7 @@
                 <th>Descrição</th>
                 <th>Conta</th>
                 <th>Tipo</th>
-                <th class="text-end">Valor</th>
+                <th>Valor</th>
                 <th>Operações</th>
               </tr>
             </thead>
@@ -73,6 +45,8 @@
     </div>
   </div>
 
+  <script src="/js/dw3frontend.js"></script>
+  <script src="https://code.jquery.com/jquery-4.0.0.slim.min.js"></script>
   <script src="https://cdn.datatables.net/2.1.8/js/dataTables.js"></script>
   <script src="https://cdn.datatables.net/2.1.8/js/dataTables.bootstrap5.js"></script>
   <script src="/apps/lancamentos/vwLstLancamentos.js"></script>

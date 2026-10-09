@@ -17,16 +17,16 @@ const GetPlanoContaByID = (req, res) =>
 
 const InsertPlanoConta = (request, res) =>
   (async () => {
-    const registro = request.body;
-    let { msg, linhasAfetadas } = await mdlPlanoContas.InsertPlanoConta(registro);
+    const planoContaREG = request.body;
+    let { msg, linhasAfetadas } = await mdlPlanoContas.InsertPlanoConta(planoContaREG);
     res.json({ "status": msg, "linhasAfetadas": linhasAfetadas });
   })();
 
 const UpdatePlanoConta = (request, res) =>
   (async () => {
     const planoContaID = parseInt(request.params.planocontaid);
-    const registro = request.body;
-    let { msg, linhasAfetadas } = await mdlPlanoContas.UpdatePlanoConta(planoContaID, registro);
+    const planoContaREG = request.body;
+    let { msg, linhasAfetadas } = await mdlPlanoContas.UpdatePlanoConta(planoContaID, planoContaREG);
     res.json({ "status": msg, "linhasAfetadas": linhasAfetadas });
   })();
 

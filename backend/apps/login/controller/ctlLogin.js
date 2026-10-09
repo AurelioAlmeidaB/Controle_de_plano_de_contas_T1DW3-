@@ -5,19 +5,13 @@ const bCrypt = require("bcryptjs");
 const mdlLogin = require("../model/mdlLogin");
 
 const Login = async (req, res, next) => {
-  const { UserName, Password } = req.body;
-
-  if (!UserName || !Password) {
-    return res.status(400).json({ auth: false, message: "Informe usuário e senha!" });
-  }
-
-  const credencial = await mdlLogin.GetCredencial(UserName);
+  const credencial = await mdlLogin.GetCredencial(req.body.UserName);
 
   if (credencial.length == 0) {
-    return res.status(403).json({ auth: false, message: "Usuário não identificado!" });
+    return res.status(403).json({ message: "Usuário não identificado!" });
   }
 
-  if (bCrypt.compareSync(Password, credencial[0].password)) {
+  if (bCrypt.compareSync(req.body.Password, credencial[0].password)) {
     //auth ok
     const username = credencial[0].username;
     const token = jwt.sign({ username }, process.env.SECRET_API, {
@@ -26,15 +20,14 @@ const Login = async (req, res, next) => {
     return res.json({ auth: true, token: token, username: username });
   }
 
-  res.status(403).json({ auth: false, message: "Login inválido!" });
+  res.status(403).json({ message: "Login inválido!" });
 };
 
-//@ Middleware que protege as rotas das APIs: só passa quem enviar um JWT válido.
 function AutenticaJWT(req, res, next) {
   const tokenHeader = req.headers["authorization"];
   if (!tokenHeader)
     return res
-      .status(401)
+      .status(200)
       .json({ auth: false, message: "Não foi informado o token JWT" });
 
   const bearer = tokenHeader.split(" ");
@@ -43,7 +36,7 @@ function AutenticaJWT(req, res, next) {
   jwt.verify(token, process.env.SECRET_API, function (err, decoded) {
     if (err)
       return res
-        .status(401)
+        .status(200)
         .json({ auth: false, message: "JWT inválido ou expirado" });
 
     req.username = decoded.username;

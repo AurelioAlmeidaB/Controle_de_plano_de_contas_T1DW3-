@@ -1,6 +1,4 @@
 // Arquivo: apps/lancamentos/vwFormLancamentos.js
-// Operações recebidas pela URL (?oper=):
-//   Cr = cadastrar | Re = visualizar | Up = atualizar | De = remover
 
 document.addEventListener('DOMContentLoaded', async function() {
   if (!dw3IsLogged()) {
@@ -8,57 +6,53 @@ document.addEventListener('DOMContentLoaded', async function() {
   }
 
   var form = document.getElementById('frmLancamentos');
-  var parametros = new URLSearchParams(window.location.search);
-  var oper = parametros.get('oper') || parametros.get('Oper');
-  var titulos = { Cr: 'Novo lançamento', Re: 'Visualizar lançamento', Up: 'Atualizar lançamento', De: 'Remover lançamento' };
 
-  document.getElementById('tituloOperacao').textContent = titulos[oper] || 'Formulário';
+  if (!form) {
+    return;
+  }
+
+  // oper vem da url: Cr (criar), Re (visualizar), Up (atualizar) e De (remover)
+  var oper = new URLSearchParams(window.location.search).get('oper') || 'Cr';
+  var btnInserir = document.getElementById('btnInserirLancamento');
+  var btnAtualizar = document.getElementById('btnAtualizarLancamento');
+  var btnRemover = document.getElementById('btnRemoverLancamento');
+
   inicializarSelectPlanoContas();
 
-  form.addEventListener('submit', function(event) {
-    event.preventDefault();
-
-    if (oper === 'Cr') {
-      vwInsertLancamento();
-    } else if (oper === 'Up') {
-      vwUpdateLancamento();
-    }
-  });
-
   if (oper === 'Cr') {
-    dw3MostrarBotao('btnInserirLancamento');
-    document.getElementById('datalancamento').value = new Date().toLocaleDateString('sv-SE'); // Data de hoje (AAAA-MM-DD)
-    await vwGetPlanoContasToLancamentos();
-    document.getElementById('descricao').focus();
-    return;
+    btnInserir.classList.remove('d-none');
+    btnInserir.addEventListener('click', function() {
+      vwInsertLancamento();
+    });
+    carregarPlanoContasToLancamentos();
   }
 
   if (oper === 'Re') {
-    await vwGetLancamentoByID();
-    dw3HabilitarCampos(form, false);
-    return;
+    bloquearCamposLancamento();
+    vwGetLancamentoByID();
   }
 
   if (oper === 'Up') {
-    var btnAtualizar = dw3MostrarBotao('btnAtualizarLancamento');
+    btnAtualizar.classList.remove('d-none');
+    btnAtualizar.disabled = true;
+    btnAtualizar.addEventListener('click', function() {
+      vwUpdateLancamento();
+    });
     btnAtualizar.disabled = !(await vwGetLancamentoByID());
-    return;
   }
 
   if (oper === 'De') {
-    var btnRemover = dw3MostrarBotao('btnRemoverLancamento');
-    btnRemover.disabled = !(await vwGetLancamentoByID());
-    dw3HabilitarCampos(form, false);
+    bloquearCamposLancamento();
+    btnRemover.classList.remove('d-none');
+    btnRemover.disabled = true;
     btnRemover.addEventListener('click', function() {
       vwDeleteLancamento();
     });
-    return;
+    btnRemover.disabled = !(await vwGetLancamentoByID());
   }
-
-  dw3ExibirMensagem('lancamentoAlert', 'Operação inválida.', 'danger');
 });
 
-// Aqui é inicializado o componente Select2 em branco.
+// Aqui é inicializado o componente Select2.js em branco
 function inicializarSelectPlanoContas() {
   $('#planocontaid').select2({
     theme: 'bootstrap-5',
@@ -67,103 +61,120 @@ function inicializarSelectPlanoContas() {
   });
 }
 
-function obterServidorLancamentos() {
-  var servidorDw3 = document.getElementById('frmLancamentos').dataset.servidorDw3;
-
-  if (!servidorDw3) {
-    throw new Error('Endereço do servidor backend não configurado.');
-  }
-
-  return servidorDw3;
-}
-
-function mensagemDeErro(error, padrao) {
-  return error instanceof TypeError
-    ? 'Não foi possível conectar ao servidor backend.'
-    : error.message || padrao;
+function bloquearCamposLancamento() {
+  document.getElementById('descricao').readOnly = true;
+  document.getElementById('valor').readOnly = true;
+  document.getElementById('datalancamento').readOnly = true;
+  document.getElementById('planocontaid').disabled = true;
 }
 
 function montarLancamentoDoFormulario() {
   return {
-    descricao: document.getElementById('descricao').value.trim(),
+    descricao: document.getElementById('descricao').value,
     valor: Number(document.getElementById('valor').value),
     datalancamento: document.getElementById('datalancamento').value,
     planocontaid: Number(document.getElementById('planocontaid').value)
   };
 }
 
-// Consome a API getPlanoContasToLancamentos e preenche o Select2 com as contas ativas.
-async function vwGetPlanoContasToLancamentos() {
+function obterLancamentoIdDaUrl() {
+  var lancamentoId = new URLSearchParams(window.location.search).get('lancamentoId');
+
+  if (!lancamentoId || !/^\d+$/.test(lancamentoId) || Number(lancamentoId) <= 0) {
+    throw new Error('ID do lançamento inválido.');
+  }
+
+  return lancamentoId;
+}
+
+// Faz a requisição ao backend e trata as respostas de erro padrão do sistema.
+async function enviarRequisicaoLancamento(caminho, opcoes, mensagemErro) {
+  var servidorDw3 = document.getElementById('frmLancamentos').dataset.servidorDw3;
+
+  if (!servidorDw3) {
+    throw new Error('Endereço do servidor backend não configurado.');
+  }
+
+  var response = await fetch(servidorDw3 + caminho, opcoes);
+
+  if (!response.ok) {
+    throw new Error(mensagemErro);
+  }
+
+  var data = await response.json();
+
+  if (data.auth === false) {
+    throw new Error(data.message || 'Sessão expirada. Faça login novamente.');
+  }
+
+  if (data.status !== 'ok') {
+    throw new Error(data.status || mensagemErro);
+  }
+
+  return data;
+}
+
+// Aqui é preenchido o componente Select2 com as contas disponíveis
+async function carregarPlanoContasToLancamentos() {
   try {
-    var data = await dw3Requisicao(obterServidorLancamentos() + '/getPlanoContasToLancamentos');
+    var data = await enviarRequisicaoLancamento('/getPlanoContasToLancamentos', {
+      headers: dw3MontarHeadersAutenticacao()
+    }, 'Não foi possível carregar as contas.');
 
-    if (data.status !== 'ok' || !Array.isArray(data.registro)) {
-      throw new Error('Resposta inválida do servidor backend.');
-    }
-
-    var select = document.getElementById('planocontaid');
-    select.innerHTML = '<option value="">Selecione uma conta</option>';
+    var contaSelect = document.getElementById('planocontaid');
+    contaSelect.innerHTML = '<option value="">Selecione uma conta</option>';
 
     data.registro.forEach(function(conta) {
       var option = document.createElement('option');
       option.value = conta.planocontaid;
       option.textContent = conta.codigo + ' - ' + conta.descricao + ' (' + conta.tipo + ')';
-      select.appendChild(option);
+      contaSelect.appendChild(option);
     });
 
     $('#planocontaid').trigger('change');
   } catch (error) {
-    dw3ExibirMensagem('lancamentoAlert', mensagemDeErro(error, 'Erro ao carregar as contas.'), 'danger');
+    alert(error.message || 'Erro ao carregar contas.');
   }
 }
 
-// Consome a API getLancamentoByID e preenche os campos. Retorna true se encontrou o lançamento.
+// Retorna true quando o lançamento foi carregado no formulário.
 async function vwGetLancamentoByID() {
   try {
-    var id = dw3ObterIdDaUrl();
+    var lancamentoId = obterLancamentoIdDaUrl();
+    var data = await enviarRequisicaoLancamento('/getLancamentoByID/' + encodeURIComponent(lancamentoId), {
+      headers: dw3MontarHeadersAutenticacao()
+    }, 'Não foi possível carregar o lançamento.');
 
-    if (!id) {
-      throw new Error('ID do lançamento inválido.');
-    }
-
-    var data = await dw3Requisicao(obterServidorLancamentos() + '/getLancamentoByID/' + encodeURIComponent(id));
-
-    if (data.status !== 'ok' || !Array.isArray(data.registro)) {
-      throw new Error('Resposta inválida do servidor backend.');
-    }
-
-    var lancamento = data.registro[0];
+    var lancamento = Array.isArray(data.registro) ? data.registro[0] : null;
 
     if (!lancamento) {
-      throw new Error('Lançamento não encontrado ou já removido.');
+      throw new Error('Lançamento não encontrado.');
     }
 
     document.getElementById('lancamentoid').value = lancamento.lancamentoid;
     document.getElementById('descricao').value = lancamento.descricao ?? '';
     document.getElementById('valor').value = lancamento.valor ?? '';
-    document.getElementById('datalancamento').value = lancamento.datalancamento ? lancamento.datalancamento.slice(0, 10) : '';
+    document.getElementById('datalancamento').value = lancamento.datalancamento ?? '';
 
-    await vwGetPlanoContasToLancamentos(); // Carrega o componente Select2.
+    await carregarPlanoContasToLancamentos(); // Carrega o componente Select2.
 
-    // Se a conta do lançamento estiver inativa, ela não vem na lista; então é adicionada para exibição.
-    var select = document.getElementById('planocontaid');
-    if (!select.querySelector('option[value="' + lancamento.planocontaid + '"]')) {
+    // Se a conta estiver inativa ela não vem na lista, então é adicionada aqui.
+    var contaSelect = document.getElementById('planocontaid');
+    if (!contaSelect.querySelector('option[value="' + lancamento.planocontaid + '"]')) {
       var option = document.createElement('option');
       option.value = lancamento.planocontaid;
-      option.textContent = lancamento.codigo + ' - ' + lancamento.contadescricao + ' (' + lancamento.tipo + ', inativa)';
-      select.appendChild(option);
+      option.textContent = lancamento.codigo + ' - ' + lancamento.contadescricao + ' (' + lancamento.tipo + ')';
+      contaSelect.appendChild(option);
     }
 
     $('#planocontaid').val(String(lancamento.planocontaid)).trigger('change');
-
     return true;
   } catch (error) {
-    dw3ExibirMensagem('lancamentoAlert', mensagemDeErro(error, 'Erro ao carregar o lançamento.'), 'danger');
+    alert(error.message || 'Erro ao carregar lançamento.');
     return false;
   }
 }
 
-// Consome a API insertLancamento.
 async function vwInsertLancamento() {
   var form = document.getElementById('frmLancamentos');
   var btnInserir = document.getElementById('btnInserirLancamento');
@@ -172,28 +183,23 @@ async function vwInsertLancamento() {
     return;
   }
 
-  btnInserir.disabled = true;
-
   try {
-    var data = await dw3Requisicao(obterServidorLancamentos() + '/insertLancamento', {
+    btnInserir.disabled = true;
+
+    await enviarRequisicaoLancamento('/insertLancamento', {
       method: 'POST',
+      headers: dw3MontarHeadersAutenticacao({ 'content-type': 'application/json' }),
       body: JSON.stringify(montarLancamentoDoFormulario())
-    });
+    }, 'Não foi possível inserir o lançamento.');
 
-    if (data.status !== 'ok') {
-      throw new Error(data.status || 'Não foi possível inserir o lançamento.');
-    }
-
-    dw3SalvarAviso('Lançamento inserido com sucesso.', 'success');
     window.location.href = '/lancamentos';
   } catch (error) {
-    dw3ExibirMensagem('lancamentoAlert', mensagemDeErro(error, 'Erro ao inserir o lançamento.'), 'danger');
+    alert(error.message || 'Erro ao inserir lançamento.');
   } finally {
     btnInserir.disabled = false;
   }
 }
 
-// Consome a API updateLancamento.
 async function vwUpdateLancamento() {
   var form = document.getElementById('frmLancamentos');
   var btnAtualizar = document.getElementById('btnAtualizarLancamento');
@@ -202,66 +208,53 @@ async function vwUpdateLancamento() {
     return;
   }
 
-  btnAtualizar.disabled = true;
-
   try {
-    var id = document.getElementById('lancamentoid').value;
+    var lancamentoId = obterLancamentoIdDaUrl();
+    btnAtualizar.disabled = true;
 
-    var data = await dw3Requisicao(obterServidorLancamentos() + '/updateLancamento/' + encodeURIComponent(id), {
+    var data = await enviarRequisicaoLancamento('/updateLancamento/' + encodeURIComponent(lancamentoId), {
       method: 'PUT',
+      headers: dw3MontarHeadersAutenticacao({ 'content-type': 'application/json' }),
       body: JSON.stringify(montarLancamentoDoFormulario())
-    });
-
-    if (data.status !== 'ok') {
-      throw new Error(data.status || 'Não foi possível atualizar o lançamento.');
-    }
+    }, 'Não foi possível atualizar o lançamento.');
 
     if (data.linhasAfetadas !== 1) {
       throw new Error('Nenhum lançamento foi atualizado.');
     }
 
-    dw3SalvarAviso('Lançamento atualizado com sucesso.', 'success');
+    alert('Lançamento atualizado com sucesso.');
     window.location.href = '/lancamentos';
   } catch (error) {
-    dw3ExibirMensagem('lancamentoAlert', mensagemDeErro(error, 'Erro ao atualizar o lançamento.'), 'danger');
+    alert(error.message || 'Erro ao atualizar lançamento.');
   } finally {
     btnAtualizar.disabled = false;
   }
 }
 
-// Consome a API deleteLancamento (soft delete).
 async function vwDeleteLancamento() {
   var btnRemover = document.getElementById('btnRemoverLancamento');
 
-  if (btnRemover.disabled) {
+  if (btnRemover.disabled || !window.confirm('Confirma a remoção deste lançamento?')) {
     return;
   }
-
-  if (!window.confirm('Confirma a remoção do lançamento "' + document.getElementById('descricao').value + '"?')) {
-    return;
-  }
-
-  btnRemover.disabled = true;
 
   try {
-    var id = document.getElementById('lancamentoid').value;
+    var lancamentoId = obterLancamentoIdDaUrl();
+    btnRemover.disabled = true;
 
-    var data = await dw3Requisicao(obterServidorLancamentos() + '/deleteLancamento/' + encodeURIComponent(id), {
-      method: 'DELETE'
-    });
-
-    if (data.status !== 'ok') {
-      throw new Error(data.status || 'Não foi possível remover o lançamento.');
-    }
+    var data = await enviarRequisicaoLancamento('/deleteLancamento/' + encodeURIComponent(lancamentoId), {
+      method: 'DELETE',
+      headers: dw3MontarHeadersAutenticacao()
+    }, 'Não foi possível remover o lançamento.');
 
     if (data.linhasAfetadas !== 1) {
       throw new Error('Nenhum lançamento foi removido.');
     }
 
-    dw3SalvarAviso('Lançamento removido com sucesso.', 'success');
     window.location.href = '/lancamentos';
   } catch (error) {
-    dw3ExibirMensagem('lancamentoAlert', mensagemDeErro(error, 'Erro ao remover o lançamento.'), 'danger');
+    alert(error.message || 'Erro ao remover lançamento.');
+  } finally {
     btnRemover.disabled = false;
   }
 }

@@ -21,7 +21,7 @@ const GetPlanoContaByID = async (planoContaIDPar) => {
 };
 
 const InsertPlanoConta = async (registroPar) => {
-  //@ Atenção: a variável msg é usada para retornar erros de banco de dados.
+  //@ Atenção: aqui utilizamos a variável msg para retornar erros de banco de dados.
   let linhasAfetadas;
   let msg = "ok";
   try {
@@ -37,7 +37,7 @@ const InsertPlanoConta = async (registroPar) => {
       )
     ).rowCount;
   } catch (error) {
-    msg = "[mdlPlanoContas|InsertPlanoConta] " + (error.detail || error.message);
+    msg = "[mdlPlanoContas|InsertPlanoConta] " + error.detail;
     linhasAfetadas = -1;
   }
 
@@ -66,43 +66,38 @@ const UpdatePlanoConta = async (planoContaIDPar, registroPar) => {
       )
     ).rowCount;
   } catch (error) {
-    msg = "[mdlPlanoContas|UpdatePlanoConta] " + (error.detail || error.message);
+    msg = "[mdlPlanoContas|UpdatePlanoConta] " + error.detail;
     linhasAfetadas = -1;
   }
 
   return { msg, linhasAfetadas };
 };
 
-//@ Soft delete: o registro não é apagado, apenas o campo removido passa para true.
 const DeletePlanoConta = async (planoContaIDPar) => {
   let linhasAfetadas;
   let msg = "ok";
 
   try {
-    //@ Regra de negócio: não remove conta que possui lançamentos ativos.
-    const lancamentos = (
+    //@ Não deixa remover uma conta que ainda tem lançamentos.
+    const totalLancamentos = (
       await db.query(
-        "SELECT count(*) as total FROM lancamentos " +
-          "WHERE planocontaid = $1 and removido = false",
+        "SELECT count(*) FROM lancamentos WHERE planocontaid = $1 and removido = false",
         [planoContaIDPar]
       )
-    ).rows[0];
+    ).rows[0].count;
 
-    if (Number(lancamentos.total) > 0) {
-      return {
-        msg: "A conta possui " + lancamentos.total + " lançamento(s) ativo(s) e não pode ser removida.",
-        linhasAfetadas: 0,
-      };
+    if (totalLancamentos > 0) {
+      return { msg: "Esta conta possui lançamentos e não pode ser removida.", linhasAfetadas: 0 };
     }
 
     linhasAfetadas = (
       await db.query(
-        "UPDATE planocontas SET " + "removido = true " + "WHERE planocontaid = $1 and removido = false",
+        "UPDATE planocontas SET " + "removido = true " + "WHERE planocontaid = $1",
         [planoContaIDPar]
       )
     ).rowCount;
   } catch (error) {
-    msg = "[mdlPlanoContas|DeletePlanoConta] " + (error.detail || error.message);
+    msg = "[mdlPlanoContas|DeletePlanoConta] " + error.detail;
     linhasAfetadas = -1;
   }
 

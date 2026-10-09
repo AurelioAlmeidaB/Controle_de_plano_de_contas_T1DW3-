@@ -23,7 +23,7 @@ const GetLancamentoByID = async (lancamentoIDPar) => {
   ).rows;
 };
 
-//@ Lista as contas disponíveis para o componente Select do formulário de lançamentos.
+//@ Contas usadas no componente Select do formulário de lançamentos.
 const GetPlanoContasToLancamentos = async () => {
   return (
     await db.query(
@@ -34,7 +34,7 @@ const GetPlanoContasToLancamentos = async () => {
 };
 
 const InsertLancamento = async (registroPar) => {
-  //@ Atenção: a variável msg é usada para retornar erros de banco de dados.
+  //@ Atenção: aqui utilizamos a variável msg para retornar erros de banco de dados.
   let linhasAfetadas;
   let msg = "ok";
   try {
@@ -50,7 +50,7 @@ const InsertLancamento = async (registroPar) => {
       )
     ).rowCount;
   } catch (error) {
-    msg = "[mdlLancamentos|InsertLancamento] " + (error.detail || error.message);
+    msg = "[mdlLancamentos|InsertLancamento] " + error.detail;
     linhasAfetadas = -1;
   }
 
@@ -79,14 +79,13 @@ const UpdateLancamento = async (lancamentoIDPar, registroPar) => {
       )
     ).rowCount;
   } catch (error) {
-    msg = "[mdlLancamentos|UpdateLancamento] " + (error.detail || error.message);
+    msg = "[mdlLancamentos|UpdateLancamento] " + error.detail;
     linhasAfetadas = -1;
   }
 
   return { msg, linhasAfetadas };
 };
 
-//@ Soft delete: o registro não é apagado, apenas o campo removido passa para true.
 const DeleteLancamento = async (lancamentoIDPar) => {
   let linhasAfetadas;
   let msg = "ok";
@@ -99,7 +98,7 @@ const DeleteLancamento = async (lancamentoIDPar) => {
       )
     ).rowCount;
   } catch (error) {
-    msg = "[mdlLancamentos|DeleteLancamento] " + (error.detail || error.message);
+    msg = "[mdlLancamentos|DeleteLancamento] " + error.detail;
     linhasAfetadas = -1;
   }
 

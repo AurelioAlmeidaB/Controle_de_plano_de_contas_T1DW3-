@@ -1,4 +1,4 @@
-// arquivo: apps/lancamentos/vwLstLancamentos.js
+// arquivo: ./apps/lancamentos/vwLstLancamentos.js
 
 document.addEventListener('DOMContentLoaded', function() {
   if (!dw3IsLogged()) {
@@ -6,58 +6,47 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 
   var listagem = document.getElementById('lancamentosListagem');
+  var alertBox = document.getElementById('lancamentosAlert');
 
   if (!listagem) {
     return;
   }
 
-  dw3ExibirAvisoPendente('lancamentosAlert');
+  var servidorDw3 = listagem.dataset.servidorDw3;
+
   configurarOperacoesLancamentos();
-  vwGetAllLancamentos(listagem.dataset.servidorDw3);
+  vwGetAllLancamentos(servidorDw3, alertBox);
 });
 
-// Consome a API getAllLancamentos e preenche a tabela e os totais.
-async function vwGetAllLancamentos(servidorDw3) {
+async function vwGetAllLancamentos(servidorDw3, alertBox) {
   try {
     if (!servidorDw3) {
       throw new Error('Endereço do servidor backend não configurado.');
     }
 
-    var data = await dw3Requisicao(servidorDw3 + '/getAllLancamentos');
+    var response = await fetch(servidorDw3 + '/getAllLancamentos', {
+      headers: dw3MontarHeadersAutenticacao()
+    });
+
+    if (!response.ok) {
+      throw new Error('Não foi possível carregar a lista de lançamentos.');
+    }
+
+    var data = await response.json();
+
+    if (data.auth === false) {
+      throw new Error(data.message || 'Sessão expirada. Faça login novamente.');
+    }
 
     if (data.status !== 'ok' || !Array.isArray(data.registro)) {
       throw new Error('Resposta inválida do servidor backend.');
     }
 
-    atualizarTotais(data.registro);
     inicializarTabelaLancamentos(data.registro);
   } catch (error) {
-    dw3ExibirMensagem('lancamentosAlert', error instanceof TypeError
-      ? 'Não foi possível conectar ao servidor backend.'
-      : error.message || 'Erro ao carregar os lançamentos.', 'danger');
+    exibirErro(alertBox, error.message || 'Erro ao carregar lançamentos.');
     inicializarTabelaLancamentos([]);
   }
-}
-
-function atualizarTotais(lancamentos) {
-  var receitas = 0;
-  var despesas = 0;
-
-  lancamentos.forEach(function(lancamento) {
-    if (lancamento.tipo === 'Receita') {
-      receitas += Number(lancamento.valor);
-    } else {
-      despesas += Number(lancamento.valor);
-    }
-  });
-
-  var saldo = receitas - despesas;
-  var elSaldo = document.getElementById('totalSaldo');
-
-  document.getElementById('totalReceitas').textContent = dw3FormatarMoeda(receitas);
-  document.getElementById('totalDespesas').textContent = dw3FormatarMoeda(despesas);
-  elSaldo.textContent = dw3FormatarMoeda(saldo);
-  elSaldo.classList.add(saldo >= 0 ? 'text-success' : 'text-danger');
 }
 
 function inicializarTabelaLancamentos(lancamentos) {
@@ -70,8 +59,11 @@ function inicializarTabelaLancamentos(lancamentos) {
         data: 'datalancamento',
         defaultContent: '',
         render: function(data, type) {
-          // Para ordenar usa a data AAAA-MM-DD; para exibir, DD/MM/AAAA.
-          return type === 'display' ? dw3FormatarData(data) : data;
+          if (!data || type !== 'display') {
+            return data || '';
+          }
+
+          return new Date(data + 'T00:00:00').toLocaleDateString('pt-BR');
         }
       },
       { data: 'descricao', defaultContent: '' },
@@ -79,26 +71,26 @@ function inicializarTabelaLancamentos(lancamentos) {
         data: null,
         defaultContent: '',
         render: function(data, type, row) {
-          return (row.codigo || '') + ' - ' + (row.contadescricao || '');
+          return row.codigo + ' - ' + row.contadescricao;
         }
       },
-      {
-        data: 'tipo',
-        defaultContent: '',
-        render: function(data, type) {
-          if (type !== 'display') {
-            return data;
-          }
-          var cor = data === 'Receita' ? 'text-bg-success' : 'text-bg-danger';
-          return '<span class="badge ' + cor + '">' + dw3EscaparHtml(data || '') + '</span>';
-        }
-      },
+      { data: 'tipo', defaultContent: '' },
       {
         data: 'valor',
         defaultContent: '',
-        className: 'text-end',
         render: function(data, type) {
-          return type === 'display' ? dw3FormatarMoeda(data) : Number(data);
+          if (data === null || data === undefined || data === '') {
+            return '';
+          }
+
+          if (type !== 'display') {
+            return Number(data);
+          }
+
+          return Number(data).toLocaleString('pt-BR', {
+            style: 'currency',
+            currency: 'BRL'
+          });
         }
       },
       {
@@ -110,28 +102,47 @@ function inicializarTabelaLancamentos(lancamentos) {
             return '';
           }
 
-          var id = dw3EscaparHtml(row.lancamentoid || '');
+          var lancamentoId = escaparHtml(row.lancamentoid || '');
 
           return [
             '<div class="btn-group btn-group-sm" role="group" aria-label="Operações do lançamento">',
-            '<button class="btn btn-outline-primary" type="button" data-action="visualizar" data-id="' + id + '" title="Visualizar" aria-label="Visualizar"><i class="bi bi-eye"></i></button>',
-            '<button class="btn btn-outline-secondary" type="button" data-action="atualizar" data-id="' + id + '" title="Atualizar" aria-label="Atualizar"><i class="bi bi-pencil-square"></i></button>',
-            '<button class="btn btn-outline-danger" type="button" data-action="remover" data-id="' + id + '" title="Remover" aria-label="Remover"><i class="bi bi-trash"></i></button>',
+            '<button class="btn btn-outline-primary" type="button" data-action="visualizar" data-lancamentoid="' + lancamentoId + '" title="Visualizar" aria-label="Visualizar"><i class="bi bi-eye"></i></button>',
+            '<button class="btn btn-outline-secondary" type="button" data-action="atualizar" data-lancamentoid="' + lancamentoId + '" title="Atualizar" aria-label="Atualizar"><i class="bi bi-pencil-square"></i></button>',
+            '<button class="btn btn-outline-danger" type="button" data-action="remover" data-lancamentoid="' + lancamentoId + '" title="Remover" aria-label="Remover"><i class="bi bi-trash"></i></button>',
             '</div>'
           ].join('');
         }
       }
     ],
-    language: dw3DataTablesPtBr
+    language: {
+      emptyTable: 'Nenhum lançamento cadastrado.',
+      info: 'Mostrando _START_ até _END_ de _TOTAL_ registros',
+      infoEmpty: 'Mostrando 0 até 0 de 0 registros',
+      infoFiltered: '(filtrado de _MAX_ registros no total)',
+      lengthMenu: 'Mostrar _MENU_ registros',
+      loadingRecords: 'Carregando...',
+      processing: 'Processando...',
+      search: 'Pesquisar:',
+      zeroRecords: 'Nenhum registro encontrado',
+      paginate: {
+        first: 'Primeiro',
+        last: 'Último',
+        next: 'Próximo',
+        previous: 'Anterior'
+      }
+    }
   });
 }
 
-// Os botões da tabela abrem o formulário com a operação: Re (visualizar), Up (atualizar), De (remover).
 function configurarOperacoesLancamentos() {
   var tabela = document.getElementById('tblLancamentos');
 
+  if (!tabela) {
+    return;
+  }
+
   tabela.addEventListener('click', function(event) {
-    var botao = event.target.closest('button[data-action][data-id]');
+    var botao = event.target.closest('button[data-action][data-lancamentoid]');
 
     if (!botao) {
       return;
@@ -140,6 +151,28 @@ function configurarOperacoesLancamentos() {
     var operacoes = { visualizar: 'Re', atualizar: 'Up', remover: 'De' };
     var oper = operacoes[botao.dataset.action];
 
-    window.location.href = '/lancamentos/form?oper=' + oper + '&id=' + encodeURIComponent(botao.dataset.id);
+    if (oper) {
+      window.location.href = '/lancamentos/form?oper=' + oper + '&lancamentoId=' + encodeURIComponent(botao.dataset.lancamentoid);
+    }
   });
+}
+
+function escaparHtml(valor) {
+  return String(valor)
+    .replace(/&/g, '&amp;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+}
+
+function exibirErro(alertBox, mensagem) {
+  if (!alertBox) {
+    return;
+  }
+
+  alertBox.textContent = mensagem;
+  alertBox.classList.remove('alert-info');
+  alertBox.classList.add('alert-danger');
+  alertBox.classList.remove('d-none');
 }
